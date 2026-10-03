@@ -10,6 +10,7 @@ These checks use the revised implementation and the isolated LocalStack 4.14.0 e
 | `make test` | 55 tests passed |
 | `make compatibility` | All required protocol checks passed; EventBridge minute rule invoked Lambda after 60.4 seconds |
 | `make integration` | 24 checks passed against the deployed API |
+| `make recovery` | Fresh deployment recovered missed validation, expiration cleanup, and missed deletion dispatch in 209.73 seconds, with zero manual invocations |
 | `make limits` | Exactly 20 MiB accepted; exactly 25 million pixels accepted; more than 25 million pixels rejected |
 | OpenAPI document | YAML parsed and all 55 local references resolved |
 
@@ -21,7 +22,9 @@ The byte and pixel boundary checks completed in approximately 1.1 to 1.4 seconds
 
 ## Scheduled application recovery
 
-The first application-level five-minute recovery check did not converge within seven minutes. The three simulated interrupted operations remained unchanged. The rule fired, but LocalStack skipped delivery because the target input was the empty object `{}`. The target now supplies a nonempty recovery message. Existing interrupted records subsequently reached their expected terminal states on an actual timer tick. A fresh-environment check is in progress; a successful minute-rule compatibility probe alone does not establish application recovery.
+The first application-level five-minute recovery check did not converge within seven minutes. The three simulated interrupted operations remained unchanged. The rule fired, but LocalStack skipped delivery because the target input was the empty object `{}`. The target now supplies a nonempty recovery message. Existing interrupted records subsequently reached their expected terminal states on an actual timer tick. The fresh-environment check then passed on the actual five-minute rule. It recovered missed validation to `ready`, an abandoned upload to `expired`, and missed deletion dispatch to `deleted`. Original or empty stored bytes matched each outcome. The run completed in 209.73 seconds with zero manual worker or recovery invocations.
+
+The first cold-restart bootstrap exceeded its 180-second Lambda startup wait. The worker later became active, and two successive bootstrap runs completed with the same API URL. No runtime error in the available INFO logs established the cause of that delay. The fresh deployment passed all 24 API integration checks.
 
 ## Limits of the evidence
 
@@ -29,6 +32,6 @@ The first application-level five-minute recovery check did not converge within s
 - LocalStack's EventBridge Scheduler API stored schedules without executing them. The implementation uses an EventBridge scheduled rule instead. The automatic recovery interval and application contract remain five minutes.
 - Unit tests use Moto and controlled failures. Integration tests use emulated AWS services. Neither establishes real AWS IAM enforcement, production throughput, or availability during service outages.
 - Authentication is supplied by the surrounding platform. Local `X-User-Id` is a development identity only. Production accepts the trusted authorizer context.
-- GitHub Actions has not yet run for this repository. Its configured checks are lint and unit tests; local integration and timed recovery remain separate commands.
+- GitHub Actions runs lint and unit tests. Check the repository Actions page for the result of a particular commit; local integration and timed recovery remain separate commands.
 
 See [compatibility details](compatibility.md), [the API contract](openapi.yaml), and [the approved plan](plan.md). Each local verification script records its latest measured output under ignored `.local/` files. Rerun the commands to obtain fresh evidence after changes.

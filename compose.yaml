@@ -5,7 +5,7 @@ services:
     ports:
       - "127.0.0.1:4567:4566"
     environment:
-      SERVICES: s3,dynamodb,lambda,apigateway,iam,logs,sts,scheduler,events
+      SERVICES: s3,dynamodb,lambda,apigateway,iam,logs,sts,events
       AWS_DEFAULT_REGION: us-east-1
       LAMBDA_DOCKER_NETWORK: montycloud-images-v2
       DEBUG: "0"

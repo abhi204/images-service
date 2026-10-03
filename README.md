@@ -20,6 +20,8 @@ make limits
 
 LocalStack is pinned to `4.14.0`. The local AWS endpoint is `http://localhost:4567`; port 4566 is left available for other projects. `make bootstrap` packages Linux dependencies, creates the AWS resources, and writes their names and the API base URL to `.local/api.json`. Repeating bootstrap updates the same resources and preserves the local cursor-signing secret.
 
+Bootstrap waits up to 180 seconds for each Lambda to become active. If a cold start exceeds that wait, inspect `docker compose logs localstack` and Docker image-download status, then rerun bootstrap once startup has completed. Do not treat a timeout as a successful setup.
+
 Only the local endpoint is supported by the bootstrap and verification scripts. They explicitly use test credentials and reject external endpoints. They do not deploy to an AWS account.
 
 The compatibility check verifies actual signed PUT requests, replay protection, placeholder races, Lambda invocation, and a scheduled invocation. Signature checks are enabled with `S3_SKIP_SIGNATURE_VALIDATION=0`. The script reports failures and unverified behavior rather than counting them as passes. See [compatibility evidence](docs/compatibility.md).
