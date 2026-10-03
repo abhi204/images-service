@@ -1,6 +1,6 @@
 # MontyCloud image service plan
 
-This document records the approved scope and implementation decisions. The user approved this plan and authorized implementation in a private GitHub repository. The design was finalized before starting the revised implementation. The earlier implementation is an outdated draft; its test results do not establish that this design works.
+This document records the scope, API contract, and design decisions used to build the image service. Measured results for the implementation are in [verification results](verification.md).
 
 The service lets authenticated users upload original images, makes validated images publicly browsable, and lets owners delete them. Python, API Gateway, Lambda, S3, DynamoDB, and LocalStack satisfy the assignment's requested stack. An EventBridge scheduled rule supplies automatic recovery every five minutes. The compatibility test found that LocalStack 4.14.0 stores EventBridge Scheduler schedules without executing them, so the implementation uses scheduled rules for the same recovery behavior.
 
@@ -155,22 +155,22 @@ Deletion removes stored image content, not every storage record. Empty objects a
 
 ## Verification and implementation sequence
 
-Implementation is authorized. Complete each verification gate before proceeding to the work that depends on it.
+The implementation followed these verification gates in order.
 
 1. Establish a clean local repository and prove the critical LocalStack behavior in a narrow compatibility check: signed conditional PUT, exact byte-bound enforcement, simultaneous upload and placeholder writes, private-bucket configuration, asynchronous Lambda invocation, and EventBridge scheduled-rule delivery. Prefer the existing pinned LocalStack community release if it supports the required behavior. If a required feature is unsupported, report the specific gap and revisit the version or design. Do not replace an integration check with a mock while claiming equivalence. Do not deploy to real AWS without separate authorization.
 2. Configure both DynamoDB tables, TTL on `UploadRequests`, and the three indexes on `Images`. Give each Lambda access to the tables and operations it needs. Implement initiation and the lifecycle with DynamoDB conditions and transactions. Verify that a failed transaction leaves neither a new image nor a new request mapping. Verify matching and conflicting retries, owner isolation, expiration, duplicate claims, timeout recovery, and deletion/publication races before adding all routes.
 3. Implement bounded image validation and placeholder cleanup. Test valid JPEG/PNG/WebP, exact size and pixel boundaries, corrupt data, animation, mismatched declarations, interrupted reads, and S3 failures.
 4. Connect the API, background worker, and recovery schedule. Inject failures after state writes and before invocation, after an S3 write but before confirmation, and during cleanup. Confirm jobs remain recoverable and terminal states cannot be revived.
 5. Implement owner/date queries, signed cursors, authoritative state rechecks, metadata reads, and download redirects. Test combined filters, timestamp ties, empty pages with continuation, invalid cursors, index lag, and exact downloaded bytes.
-6. Run the complete LocalStack workflow from a fresh setup. Test multiple users and concurrent uploads/deletions. Run the five-minute schedule at least once and force a missed-job recovery. Record actual results and limitations. No prior-draft unit count or smoke-test count carries forward.
-7. Prepare the README, OpenAPI specification, setup/reset instructions, architecture explanation, test matrix, failure behavior, known limitations, and a short live-review demonstration. Add CI for suitable static and unit checks. Push the verified work to the authorized private GitHub repository. Do not send the submission email or grant reviewer access without authorization.
+6. Run the complete LocalStack workflow from a fresh setup. Test multiple users and concurrent uploads/deletions. Run the five-minute schedule at least once and force a missed-job recovery. Record actual results and limitations.
+7. Prepare the README, OpenAPI specification, setup/reset instructions, architecture explanation, test matrix, failure behavior, known limitations, and a short live-review demonstration. Add CI for suitable static and unit checks.
 
 Use structured logs with request IDs, image IDs, operation, outcome, and safe error codes. Do not log credentials, presigned URLs, image contents, or captions. The first load checks establish bounded-resource behavior and concurrent correctness; no production capacity claim follows from LocalStack alone.
 
-## Review status
+## Implementation status
 
-Product scope and the main architecture are agreed, including separate `Images` and `UploadRequests` tables. The routine defaults, maintenance index, module responsibilities, retry coordination, and verification sequence above are approved. The additional table, fixed global index, periodic recovery latency, retained empty objects, and eventual list consistency are deliberate tradeoffs.
+The service, local deployment, tests, and review instructions are implemented. The separate `Images` and `UploadRequests` tables, fixed global index, periodic recovery latency, retained empty objects, and eventual list consistency are deliberate tradeoffs.
 
-Environment and protocol compatibility must be demonstrated with actual requests. LocalStack results do not establish production capacity or full AWS IAM enforcement. In the local check, an unsigned direct S3 GET succeeded despite the private-bucket configuration. Keep the emulator bound to localhost and record this access-control limitation separately from signed PUT enforcement and application ownership checks.
+Environment and protocol compatibility were checked with actual requests. LocalStack results do not establish production capacity or full AWS IAM enforcement. In the local check, an unsigned direct S3 GET succeeded despite the private-bucket configuration. Keep the emulator bound to localhost and record this access-control limitation separately from signed PUT enforcement and application ownership checks.
 
-The recruiting deadline is October 4 at 11:00 PM with an unspecified timezone. The earlier finish-today constraint is withdrawn. Submission requires a GitHub repository and a working code-review demonstration. The plan is approved and implementation is in progress. Creating and pushing the assignment to a private GitHub repository is authorized; sending the submission email and granting reviewer access remain separate actions.
+For completed checks and remaining limits, see [verification results](verification.md). The repository includes a runnable LocalStack demonstration; it has not been deployed to a real AWS account.
