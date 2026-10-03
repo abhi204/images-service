@@ -1,0 +1,27 @@
+name: montycloud-images-v2
+services:
+  localstack:
+    image: localstack/localstack:4.14.0
+    ports:
+      - "127.0.0.1:4567:4566"
+    environment:
+      SERVICES: s3,dynamodb,lambda,apigateway,iam,logs,sts,scheduler,events
+      AWS_DEFAULT_REGION: us-east-1
+      LAMBDA_DOCKER_NETWORK: montycloud-images-v2
+      DEBUG: "0"
+      S3_SKIP_SIGNATURE_VALIDATION: "0"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - localstack-data:/var/lib/localstack
+    networks:
+      - images
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:4566/_localstack/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+networks:
+  images:
+    name: montycloud-images-v2
+volumes:
+  localstack-data:

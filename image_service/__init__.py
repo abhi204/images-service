@@ -1,0 +1,1 @@
+"""MontyCloud image service."""

@@ -1,0 +1,366 @@
+openapi: 3.0.3
+info:
+  title: MontyCloud image service
+  version: 1.0.0
+  description: Original-image service. The local environment explicitly simulates
+    identity with X-User-Id. A production deployment must provide trusted API Gateway
+    authorizer claims; never expose the local identity mode publicly. The actual local
+    API base URL is written to .local/api.json.
+servers:
+- url: http://localhost:4567/restapis/{api_id}/local/_user_request_
+  variables:
+    api_id:
+      default: replace-from-local-api-json
+paths:
+  /images:
+    post:
+      security: &id002
+      - LocalIdentity: []
+      operationId: initiateUpload
+      summary: Create an upload or replay the same request
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[!-~]+$
+        description: Reuse for retries of the same input. New uploads require a new
+          key. Mappings are retained at least 24 hours.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InitiateUpload'
+      responses:
+        '201':
+          description: New upload; use the returned URL to PUT bytes directly to S3.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Upload'
+        '200':
+          description: Existing upload and original deadlines. Replay never extends
+            permission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Upload'
+        '400': &id001
+          description: Request failed. See code and message.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401': *id001
+        '404': *id001
+        '409': *id001
+        '410': *id001
+        '429': *id001
+        '503': *id001
+    get:
+      operationId: listImages
+      summary: Browse public ready images, newest first
+      parameters:
+      - name: owner_id
+        in: query
+        schema:
+          type: string
+        description: Exact owner ID.
+      - name: date_from
+        in: query
+        schema:
+          type: string
+        description: Inclusive ready-time boundary. UTC ISO 8601 or YYYY-MM-DD.
+      - name: date_to
+        in: query
+        schema:
+          type: string
+        description: Exclusive ready-time boundary. UTC ISO 8601 or YYYY-MM-DD.
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 25
+      - name: cursor
+        in: query
+        schema:
+          type: string
+          maxLength: 2048
+        description: Opaque continuation. Expires after one hour; preserve all query
+          parameters. Short or empty pages may have a continuation.
+      responses:
+        '200':
+          description: Eventually consistent gallery. Continue while next_cursor is
+            non-null.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - items
+                - next_cursor
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Image'
+                  next_cursor:
+                    type: string
+                    nullable: true
+        '400': *id001
+        '429': *id001
+        '503': *id001
+  /images/{id}:
+    parameters:
+    - &id003
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      operationId: getImage
+      summary: Read public metadata for a ready image
+      responses:
+        '200':
+          description: Validated image metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Image'
+        '400': *id001
+        '401': *id001
+        '404': *id001
+        '409': *id001
+        '410': *id001
+        '429': *id001
+        '503': *id001
+    delete:
+      security: *id002
+      operationId: deleteImage
+      summary: Cancel or delete an image owned by the caller
+      responses:
+        '202':
+          description: Hidden immediately; storage cleanup is pending. Poll status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        '204':
+          description: Already deleted; empty storage placeholder confirmed.
+        '400': *id001
+        '401': *id001
+        '404': *id001
+        '409': *id001
+        '410': *id001
+        '429': *id001
+        '503': *id001
+  /images/{id}/complete:
+    parameters:
+    - *id003
+    post:
+      security: *id002
+      operationId: completeUpload
+      summary: Accept validation work after S3 upload
+      responses:
+        '202':
+          description: Durable processing accepted. Poll status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        '200':
+          description: Already ready.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        '400': *id001
+        '401': *id001
+        '404': *id001
+        '409': *id001
+        '410': *id001
+        '429': *id001
+        '503': *id001
+  /images/{id}/status:
+    parameters:
+    - *id003
+    get:
+      security: *id002
+      operationId: getUploadStatus
+      summary: Read the owner-visible lifecycle outcome
+      responses:
+        '200':
+          description: Current state, including terminal rejection or failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        '400': *id001
+        '401': *id001
+        '404': *id001
+        '409': *id001
+        '410': *id001
+        '429': *id001
+        '503': *id001
+  /images/{id}/content:
+    parameters:
+    - *id003
+    get:
+      operationId: getImageContent
+      summary: View or download an original through a short-lived redirect
+      parameters:
+      - name: disposition
+        in: query
+        schema:
+          type: string
+          enum:
+          - inline
+          - attachment
+          default: inline
+      responses:
+        '302':
+          description: Follow Location to S3. URL validity is 60 seconds. Previously
+            authorized downloads cannot be recalled.
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+        '400': *id001
+        '401': *id001
+        '404': *id001
+        '409': *id001
+        '410': *id001
+        '429': *id001
+        '503': *id001
+components:
+  securitySchemes:
+    LocalIdentity:
+      type: apiKey
+      in: header
+      name: X-User-Id
+      description: Local-only identity simulation. Use alice or bob for the demo.
+        Production uses platform-provided authentication.
+  schemas:
+    Image:
+      type: object
+      required:
+      - image_id
+      - owner_id
+      - filename
+      - caption
+      - content_type
+      - size_bytes
+      - width
+      - height
+      - ready_at
+      properties:
+        image_id:
+          type: string
+          format: uuid
+        owner_id:
+          type: string
+        filename:
+          type: string
+        caption:
+          type: string
+        content_type: &id004
+          type: string
+          enum:
+          - image/jpeg
+          - image/png
+          - image/webp
+        size_bytes: &id005
+          type: integer
+          minimum: 1
+          maximum: 20971520
+        width:
+          type: integer
+          minimum: 1
+        height:
+          type: integer
+          minimum: 1
+        ready_at:
+          type: string
+          format: date-time
+    Status:
+      type: object
+      required:
+      - image_id
+      - status
+      properties:
+        image_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - uploading
+          - processing
+          - ready
+          - rejected
+          - failed
+          - expired
+          - deleting
+          - deleted
+        error_reason:
+          type: string
+    InitiateUpload:
+      type: object
+      required:
+      - filename
+      - content_type
+      - size_bytes
+      additionalProperties: false
+      properties:
+        filename:
+          type: string
+          minLength: 1
+          description: At most 255 UTF-8 bytes; NUL is forbidden.
+        content_type: *id004
+        size_bytes: *id005
+        caption:
+          type: string
+          maxLength: 2000
+          default: ''
+    Upload:
+      allOf:
+      - $ref: '#/components/schemas/Status'
+      - type: object
+        properties:
+          upload_url:
+            type: string
+            format: uri
+            description: Present only while this upload can still accept bytes.
+          upload_headers:
+            type: object
+            additionalProperties:
+              type: string
+            description: Send these exact headers with the PUT.
+          upload_expires_at:
+            type: string
+            format: date-time
+          completion_deadline:
+            type: string
+            format: date-time
+    Error:
+      type: object
+      required:
+      - code
+      - message
+      - request_id
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        request_id:
+          type: string
