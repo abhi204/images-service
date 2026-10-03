@@ -1,0 +1,475 @@
+{
+  "run_id": "0bd47d1e235e",
+  "started_at": "2026-10-03T06:55:51.122699+00:00",
+  "scope": "Local emulator observation; not production capacity proof",
+  "workload": {
+    "stage_concurrency": [
+      1,
+      3,
+      5
+    ],
+    "waves_per_stage": 3,
+    "upload_count": 27,
+    "browser_clients": 2,
+    "browser_max_requests_per_second_each": 1,
+    "wave_validation_bound": "drain before next wave",
+    "main_stop_budget_seconds": 600,
+    "overall_stop_budget_seconds": 720,
+    "deadline_note": "In-flight transport calls may finish after a stop budget",
+    "fixtures": [
+      {
+        "width": 256,
+        "height": 256,
+        "pixel_count": 65536,
+        "bytes": 197174,
+        "sha256": "4199a2df5018aaa79e49e1cc616904ed6fc95a57652e6477ca337c93f5ba5491"
+      },
+      {
+        "width": 1024,
+        "height": 1024,
+        "pixel_count": 1048576,
+        "bytes": 3150970,
+        "sha256": "7823a29ffe197529ef81edd486f74af3c6d6d4a3fb3f220dd7249183c6481c7f"
+      }
+    ]
+  },
+  "stages": [
+    {
+      "concurrency": 1,
+      "waves": 3,
+      "uploaded": 3,
+      "ready": 3,
+      "errors": [],
+      "browser_requests": {
+        "browse_global": 2,
+        "browse_owner": 2
+      },
+      "pending_on_first_poll_after_load_stop": 1,
+      "post_traffic_drain_seconds": 1.054,
+      "correctness": {
+        "download_hashes_match": true,
+        "owner_gallery_exact": true,
+        "gallery_count": 3
+      },
+      "validation_seconds": 5.749,
+      "stage_seconds": 5.873,
+      "submission_seconds": 0.473,
+      "completion_acceptances_per_second": 6.345,
+      "ready_completions_per_second": 0.522,
+      "ready_throughput_denominator_seconds": 5.749,
+      "completion_to_ready_ms": {
+        "count": 3,
+        "p50": 1062.021,
+        "p95": 3160.568,
+        "max": 3160.568
+      }
+    },
+    {
+      "concurrency": 3,
+      "waves": 3,
+      "uploaded": 9,
+      "ready": 9,
+      "errors": [],
+      "browser_requests": {
+        "browse_global": 3,
+        "browse_owner": 6
+      },
+      "pending_on_first_poll_after_load_stop": 2,
+      "post_traffic_drain_seconds": 1.137,
+      "correctness": {
+        "download_hashes_match": true,
+        "owner_gallery_exact": true,
+        "gallery_count": 12
+      },
+      "validation_seconds": 7.276,
+      "stage_seconds": 7.738,
+      "submission_seconds": 3.896,
+      "completion_acceptances_per_second": 2.31,
+      "ready_completions_per_second": 1.237,
+      "ready_throughput_denominator_seconds": 7.276,
+      "completion_to_ready_ms": {
+        "count": 9,
+        "p50": 1124.138,
+        "p95": 3203.265,
+        "max": 3203.265
+      }
+    },
+    {
+      "concurrency": 5,
+      "waves": 3,
+      "uploaded": 15,
+      "ready": 15,
+      "errors": [],
+      "browser_requests": {
+        "browse_global": 5,
+        "browse_owner": 5
+      },
+      "pending_on_first_poll_after_load_stop": 2,
+      "post_traffic_drain_seconds": 2.377,
+      "correctness": {
+        "download_hashes_match": true,
+        "owner_gallery_exact": true,
+        "gallery_count": 27
+      },
+      "validation_seconds": 7.399,
+      "stage_seconds": 8.038,
+      "submission_seconds": 2.774,
+      "completion_acceptances_per_second": 5.408,
+      "ready_completions_per_second": 2.027,
+      "ready_throughput_denominator_seconds": 7.399,
+      "completion_to_ready_ms": {
+        "count": 15,
+        "p50": 370.527,
+        "p95": 2393.774,
+        "max": 2393.774
+      }
+    }
+  ],
+  "request_latencies": {
+    "cleanup": {
+      "delete": {
+        "count": 27,
+        "failures": 0,
+        "outcomes": {
+          "ok": 27
+        },
+        "p50_ms": 30.326,
+        "p95_ms": 46.35,
+        "max_ms": 54.881
+      },
+      "status": {
+        "count": 30,
+        "failures": 0,
+        "outcomes": {
+          "ok": 30
+        },
+        "p50_ms": 14.94,
+        "p95_ms": 38.238,
+        "max_ms": 43.435
+      }
+    },
+    "concurrency_1": {
+      "browse_global": {
+        "count": 2,
+        "failures": 0,
+        "outcomes": {
+          "ok": 2
+        },
+        "p50_ms": 44.507,
+        "p95_ms": 3262.804,
+        "max_ms": 3262.804
+      },
+      "browse_owner": {
+        "count": 2,
+        "failures": 0,
+        "outcomes": {
+          "ok": 2
+        },
+        "p50_ms": 46.071,
+        "p95_ms": 3237.63,
+        "max_ms": 3237.63
+      },
+      "complete": {
+        "count": 3,
+        "failures": 0,
+        "outcomes": {
+          "ok": 3
+        },
+        "p50_ms": 52.352,
+        "p95_ms": 77.673,
+        "max_ms": 77.673
+      },
+      "content_redirect": {
+        "count": 3,
+        "failures": 0,
+        "outcomes": {
+          "ok": 3
+        },
+        "p50_ms": 22.864,
+        "p95_ms": 24.224,
+        "max_ms": 24.224
+      },
+      "download": {
+        "count": 3,
+        "failures": 0,
+        "outcomes": {
+          "ok": 3
+        },
+        "p50_ms": 4.042,
+        "p95_ms": 18.983,
+        "max_ms": 18.983
+      },
+      "gallery_page": {
+        "count": 1,
+        "failures": 0,
+        "outcomes": {
+          "ok": 1
+        },
+        "p50_ms": 25.944,
+        "p95_ms": 25.944,
+        "max_ms": 25.944
+      },
+      "initiate": {
+        "count": 3,
+        "failures": 0,
+        "outcomes": {
+          "ok": 3
+        },
+        "p50_ms": 29.14,
+        "p95_ms": 66.923,
+        "max_ms": 66.923
+      },
+      "initiate_replay": {
+        "count": 3,
+        "failures": 0,
+        "outcomes": {
+          "ok": 3
+        },
+        "p50_ms": 44.12,
+        "p95_ms": 56.663,
+        "max_ms": 56.663
+      },
+      "signed_put": {
+        "count": 3,
+        "failures": 0,
+        "outcomes": {
+          "ok": 3
+        },
+        "p50_ms": 14.216,
+        "p95_ms": 35.384,
+        "max_ms": 35.384
+      },
+      "status": {
+        "count": 8,
+        "failures": 0,
+        "outcomes": {
+          "ok": 8
+        },
+        "p50_ms": 28.867,
+        "p95_ms": 50.786,
+        "max_ms": 50.786
+      }
+    },
+    "concurrency_3": {
+      "browse_global": {
+        "count": 3,
+        "failures": 0,
+        "outcomes": {
+          "ok": 3
+        },
+        "p50_ms": 35.301,
+        "p95_ms": 3394.643,
+        "max_ms": 3394.643
+      },
+      "browse_owner": {
+        "count": 6,
+        "failures": 0,
+        "outcomes": {
+          "ok": 6
+        },
+        "p50_ms": 48.463,
+        "p95_ms": 91.173,
+        "max_ms": 91.173
+      },
+      "complete": {
+        "count": 9,
+        "failures": 0,
+        "outcomes": {
+          "ok": 9
+        },
+        "p50_ms": 52.923,
+        "p95_ms": 110.615,
+        "max_ms": 110.615
+      },
+      "content_redirect": {
+        "count": 9,
+        "failures": 0,
+        "outcomes": {
+          "ok": 9
+        },
+        "p50_ms": 25.372,
+        "p95_ms": 30.084,
+        "max_ms": 30.084
+      },
+      "download": {
+        "count": 9,
+        "failures": 0,
+        "outcomes": {
+          "ok": 9
+        },
+        "p50_ms": 5.412,
+        "p95_ms": 20.058,
+        "max_ms": 20.058
+      },
+      "gallery_page": {
+        "count": 3,
+        "failures": 0,
+        "outcomes": {
+          "ok": 3
+        },
+        "p50_ms": 32.917,
+        "p95_ms": 64.118,
+        "max_ms": 64.118
+      },
+      "initiate": {
+        "count": 9,
+        "failures": 0,
+        "outcomes": {
+          "ok": 9
+        },
+        "p50_ms": 46.556,
+        "p95_ms": 3416.137,
+        "max_ms": 3416.137
+      },
+      "initiate_replay": {
+        "count": 9,
+        "failures": 0,
+        "outcomes": {
+          "ok": 9
+        },
+        "p50_ms": 57.275,
+        "p95_ms": 104.581,
+        "max_ms": 104.581
+      },
+      "signed_put": {
+        "count": 9,
+        "failures": 0,
+        "outcomes": {
+          "ok": 9
+        },
+        "p50_ms": 18.158,
+        "p95_ms": 133.801,
+        "max_ms": 133.801
+      },
+      "status": {
+        "count": 14,
+        "failures": 0,
+        "outcomes": {
+          "ok": 14
+        },
+        "p50_ms": 18.164,
+        "p95_ms": 74.392,
+        "max_ms": 74.392
+      }
+    },
+    "concurrency_5": {
+      "browse_global": {
+        "count": 5,
+        "failures": 0,
+        "outcomes": {
+          "ok": 5
+        },
+        "p50_ms": 78.42,
+        "p95_ms": 88.646,
+        "max_ms": 88.646
+      },
+      "browse_owner": {
+        "count": 5,
+        "failures": 0,
+        "outcomes": {
+          "ok": 5
+        },
+        "p50_ms": 78.479,
+        "p95_ms": 95.099,
+        "max_ms": 95.099
+      },
+      "complete": {
+        "count": 15,
+        "failures": 0,
+        "outcomes": {
+          "ok": 15
+        },
+        "p50_ms": 65.987,
+        "p95_ms": 120.635,
+        "max_ms": 120.635
+      },
+      "content_redirect": {
+        "count": 15,
+        "failures": 0,
+        "outcomes": {
+          "ok": 15
+        },
+        "p50_ms": 21.054,
+        "p95_ms": 25.368,
+        "max_ms": 25.368
+      },
+      "download": {
+        "count": 15,
+        "failures": 0,
+        "outcomes": {
+          "ok": 15
+        },
+        "p50_ms": 5.421,
+        "p95_ms": 17.522,
+        "max_ms": 17.522
+      },
+      "gallery_page": {
+        "count": 6,
+        "failures": 0,
+        "outcomes": {
+          "ok": 6
+        },
+        "p50_ms": 26.068,
+        "p95_ms": 45.525,
+        "max_ms": 45.525
+      },
+      "initiate": {
+        "count": 15,
+        "failures": 0,
+        "outcomes": {
+          "ok": 15
+        },
+        "p50_ms": 65.618,
+        "p95_ms": 2071.136,
+        "max_ms": 2071.136
+      },
+      "initiate_replay": {
+        "count": 15,
+        "failures": 0,
+        "outcomes": {
+          "ok": 15
+        },
+        "p50_ms": 71.668,
+        "p95_ms": 102.532,
+        "max_ms": 102.532
+      },
+      "signed_put": {
+        "count": 15,
+        "failures": 0,
+        "outcomes": {
+          "ok": 15
+        },
+        "p50_ms": 15.998,
+        "p95_ms": 75.915,
+        "max_ms": 75.915
+      },
+      "status": {
+        "count": 20,
+        "failures": 0,
+        "outcomes": {
+          "ok": 20
+        },
+        "p50_ms": 18.606,
+        "p95_ms": 44.403,
+        "max_ms": 169.368
+      }
+    }
+  },
+  "correctness_totals": {
+    "expected": 27,
+    "attempted": 27,
+    "unique_image_ids": 27,
+    "ready": 27
+  },
+  "cleanup": {
+    "recorded_ids": 27,
+    "recovered_ids": 0,
+    "unresolved_uploads": 0,
+    "deleted": 27,
+    "zero_length_heads": 27,
+    "errors": []
+  },
+  "stop_reason": "completed",
+  "passed": true,
+  "elapsed_seconds": 29.319
+}

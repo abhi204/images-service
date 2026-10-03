@@ -2,10 +2,10 @@ PYTHON ?= .venv/bin/python
 ARCH ?=
 LOCALSTACK_ENDPOINT ?= http://localhost:4567
 
-.PHONY: help setup install lint test build up bootstrap compatibility integration recovery limits verify down
+.PHONY: help setup install lint test build up bootstrap compatibility integration recovery limits load verify down
 
 help:
-	@echo 'Targets: setup lint test build up bootstrap compatibility integration recovery limits verify down'
+	@echo 'Targets: setup lint test build up bootstrap compatibility integration recovery limits load verify down'
 
 setup install:
 	python3.13 -m venv .venv
@@ -37,6 +37,9 @@ recovery:
 
 limits:
 	$(PYTHON) scripts/verify_limits.py
+
+load:
+	$(PYTHON) scripts/load_test.py --config .local/api.json
 
 verify: lint test compatibility bootstrap integration recovery limits
 

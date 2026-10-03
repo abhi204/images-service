@@ -35,6 +35,14 @@ make lint
 make test
 ```
 
+Run the optional bounded load check against an existing local deployment:
+
+```sh
+make load
+```
+
+It submits 27 images in waves with 1, 3, then 5 upload clients, while two paced clients browse the gallery. Each wave finishes validation before the next begins. The final wave in each stage drains after browsing stops. The script checks repeated initiation, gallery membership, downloaded bytes, and deletion of its own fixtures. It writes request timings, errors, and cleanup results to `.local/load-result.json` and exits nonzero on failure. See [the load-test report](docs/load-test.md) for the workload, measured results, and limits. This command is separate from `make verify` and GitHub Actions.
+
 `make down` stops this project's LocalStack container. It does not stop other projects or remove the Docker volume. Treat local emulated resources as disposable: persistence across restarts is not promised by this LocalStack configuration. Rerun bootstrap after restarting it. For an intentionally fresh environment, use `docker compose down --volumes` followed by the startup commands; this removes this project's local volume and data.
 
 ## Upload an image

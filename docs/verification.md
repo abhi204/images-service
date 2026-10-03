@@ -7,14 +7,15 @@ These checks use the revised implementation and the isolated LocalStack 4.14.0 e
 | Check | Measured result |
 | --- | --- |
 | `make lint` | Ruff passed |
-| `make test` | 55 tests passed |
+| `make test` | 59 tests passed after adding four load-runner checks |
 | `make compatibility` | All required protocol checks passed; EventBridge minute rule invoked Lambda after 60.4 seconds |
 | `make integration` | 24 checks passed against the deployed API |
 | `make recovery` | Fresh deployment recovered missed validation, expiration cleanup, and missed deletion dispatch in 209.73 seconds, with zero manual invocations |
+| `make load` | 27/27 unique images ready under bounded concurrency 1, 3, and 5; zero request errors; matching downloads; 27/27 deletions with empty stored objects. [Results](load-test.md) |
 | `make limits` | Exactly 20 MiB accepted; exactly 25 million pixels accepted; more than 25 million pixels rejected |
 | OpenAPI document | YAML parsed and all 55 local references resolved |
 
-The unit tests cover owner isolation, idempotency and conflicting retries, concurrent initiation, upload expiration, stale-worker fencing, validation failures, bounded processing attempts, cleanup backoff, interrupted storage reads, cursor expiry and filter binding, sparse-index pagination, authoritative gallery rechecks, and safe error responses. The deployment policy tests cover batched reads and the scheduled-rule permission.
+The four load-runner tests check localhost-only URLs, report math, partial failure reporting, and recovery of an upload whose initiation response was lost. The other unit tests cover owner isolation, idempotency and conflicting retries, concurrent initiation, upload expiration, stale-worker fencing, validation failures, bounded processing attempts, cleanup backoff, interrupted storage reads, cursor expiry and filter binding, sparse-index pagination, authoritative gallery rechecks, and safe error responses. The deployment policy tests cover batched reads and the scheduled-rule permission.
 
 The HTTP integration checks upload JPEG, PNG, and WebP through signed S3 requests, validate them through deployed Lambdas, browse by owner and date, paginate, download identical original bytes, reject malformed content, enforce owner-only operations, and complete deletion without allowing old upload URLs to recreate content.
 
