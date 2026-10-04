@@ -1,7 +1,7 @@
 # LocalStack compatibility gate
 
-Run at 2026-10-03T03:01:01.824271+00:00 against `http://localhost:4567` with LocalStack 4.14.0.
-Resource prefix: `mc-compat-b342b0485b13`. The script uses dummy local credentials and refuses nonlocal endpoints.
+Run at 2026-10-04T05:41:51.141899+00:00 against `http://localhost:4567` with LocalStack 4.14.0.
+Resource prefix: `mc-compat-f8f1a2e5c998`. The script uses dummy local credentials and refuses nonlocal endpoints.
 The isolated compose must set `S3_SKIP_SIGNATURE_VALIDATION=0`;
 LocalStack otherwise accepts changed and omitted signed headers.
 
@@ -9,22 +9,22 @@ Overall required protocol result: **PASS**. Unsigned GET access control remains 
 
 | Check | Result | Observation | Time (ms) |
 | --- | --- | --- | ---: |
-| Private bucket setup | PASS | created mc-compat-b342b0485b13 | 167 |
-| Bucket configuration | PASS | SSE=AES256; public block=True; versioning=off | 6 |
-| Presigned required headers | PASS | signed headers: content-length, content-type, host, if-none-match | 1 |
-| Conditional first PUT and retry | PASS | first HTTP 200; retry HTTP 412; original retained=True | 38 |
-| Unsigned GET access control | UNVERIFIED | unsigned GET HTTP 200 | 2 |
-| Altered content type | PASS | HTTP 403; object created=False | 7 |
-| Omitted condition header | PASS | HTTP 403; object created=False | 3 |
-| Omitted content type | PASS | HTTP 403; object created=False | 3 |
-| Changed content length | PASS | HTTP 403; object created=False | 3 |
-| Oversized body | PASS | HTTP 403; object created=False | 151 |
-| Chunked transfer | PASS | HTTP 403; object created=False | 5 |
-| Placeholder prevents replay | PASS | replay HTTP 412; stored bytes=0 | 5 |
-| Concurrent upload and placeholder | PASS | upload HTTP 412; final stored bytes=0 | 7 |
+| Private bucket setup | PASS | created mc-compat-f8f1a2e5c998 | 255 |
+| Bucket configuration | PASS | SSE=AES256; public block=True; versioning=off | 9 |
+| Presigned required headers | PASS | signed headers: content-length, content-type, host, if-none-match | 2 |
+| Conditional first PUT and retry | PASS | first HTTP 200; retry HTTP 412; original retained=True | 64 |
+| Unsigned GET access control | UNVERIFIED | unsigned GET HTTP 200 | 1 |
+| Altered content type | PASS | HTTP 403; object created=False | 10 |
+| Omitted condition header | PASS | HTTP 403; object created=False | 5 |
+| Omitted content type | PASS | HTTP 403; object created=False | 4 |
+| Changed content length | PASS | HTTP 403; object created=False | 4 |
+| Oversized body | PASS | HTTP 403; object created=False | 178 |
+| Chunked transfer | PASS | HTTP 403; object created=False | 6 |
+| Placeholder prevents replay | PASS | replay HTTP 412; stored bytes=0 | 10 |
+| Concurrent upload and placeholder | PASS | upload HTTP 200; final stored bytes=0 | 9 |
 | Lambda async configuration | PASS | retries=0; max age=300s | 0 |
-| Lambda asynchronous execution | PASS | invoke HTTP 202; marker seen=True; delivery wait=2016 ms | 4384 |
-| EventBridge minute-rule delivery | PASS | marker seen=True; delivery wait=60399 ms | 60526 |
+| Lambda asynchronous execution | PASS | invoke HTTP 202; marker seen=True; delivery wait=2020 ms | 22626 |
+| EventBridge minute-rule delivery | PASS | marker seen=True; delivery wait=60386 ms | 60521 |
 
 The S3 probes send actual HTTP PUT requests through a presigned URL.
 The Lambda and EventBridge probes require an S3 marker written by executed function code,

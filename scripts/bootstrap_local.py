@@ -449,7 +449,8 @@ def bootstrap(endpoint: str, arch: str) -> dict[str, str]:
     ensure_function(
         lambda_client, WORKER_FUNCTION, roles["worker"],
         "image_service.lifecycle.worker_handler", 120, 1024, arch,
-        {**common, "IMAGE_BUCKET": BUCKET, "IMAGE_TABLE": IMAGE_TABLE}, archive_bytes,
+        {**common, "IMAGE_BUCKET": BUCKET, "IMAGE_TABLE": IMAGE_TABLE,
+         "WORKER_FUNCTION": WORKER_FUNCTION}, archive_bytes,
     )
     lambda_client.put_function_event_invoke_config(
         FunctionName=WORKER_FUNCTION,

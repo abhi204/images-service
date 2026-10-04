@@ -52,6 +52,40 @@ def test_role_policies_match_handler_access_patterns():
         assert "dynamodb:Scan" not in actions
 
 
+def test_bootstrap_configures_worker_for_cleanup_dispatch(monkeypatch, tmp_path):
+    (tmp_path / "function.zip").write_bytes(b"archive")
+    monkeypatch.setattr(bootstrap, "LOCAL", tmp_path)
+    monkeypatch.setattr(bootstrap, "cursor_secret", lambda: "test-secret")
+
+    class Client:
+        def put_function_event_invoke_config(self, **_kwargs):
+            pass
+
+    class Session:
+        def client(self, *_args, **_kwargs):
+            return Client()
+
+    monkeypatch.setattr(bootstrap, "session", lambda _endpoint: Session())
+    for name in (
+        "ensure_bucket", "ensure_images_ttl_disabled", "ensure_ttl", "ensure_upload_policy",
+        "ensure_log_group", "ensure_schedule",
+    ):
+        monkeypatch.setattr(bootstrap, name, lambda *_args: None)
+    monkeypatch.setattr(bootstrap, "ensure_table", lambda *_args: "arn:table")
+    monkeypatch.setattr(bootstrap, "ensure_role", lambda *_args: "arn:role")
+    monkeypatch.setattr(bootstrap, "ensure_api", lambda *_args: "http://localhost:4567/api")
+    environments = {}
+
+    def capture_function(_client, name, _role, _handler, _timeout, _memory, _arch, env, _archive):
+        environments[name] = env
+        return f"arn:function:{name}"
+
+    monkeypatch.setattr(bootstrap, "ensure_function", capture_function)
+    bootstrap.bootstrap("http://localhost:4567", "arm64")
+
+    assert environments[bootstrap.WORKER_FUNCTION]["WORKER_FUNCTION"] == bootstrap.WORKER_FUNCTION
+
+
 def test_recovery_rule_has_lambda_target_and_permission():
     class Events:
         def __init__(self):

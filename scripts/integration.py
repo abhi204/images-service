@@ -25,6 +25,13 @@ def run(config_path: Path) -> None:
         if url.scheme != "http" or url.hostname not in {"localhost", "127.0.0.1"}:
             raise ValueError("Integration checks require an explicit localhost HTTP endpoint")
     base = config["api_url"].rstrip("/")
+    aws = boto3.Session(
+        aws_access_key_id="test", aws_secret_access_key="test", region_name="us-east-1"
+    )
+    ddb = aws.resource("dynamodb", endpoint_url=config["endpoint_url"])
+    s3 = aws.client("s3", endpoint_url=config["endpoint_url"])
+    events = aws.client("events", endpoint_url=config["endpoint_url"])
+    lambda_client = aws.client("lambda", endpoint_url=config["endpoint_url"])
     run_id = uuid.uuid4().hex[:12]
     alice, bob = f"alice-{run_id}", f"bob-{run_id}"
     checks = []
@@ -83,6 +90,14 @@ def run(config_path: Path) -> None:
                 raise AssertionError(f"Expected {wanted}, got {result}")
             time.sleep(1)
         raise TimeoutError(f"Image did not reach {wanted} in {timeout}s")
+
+    worker_env = lambda_client.get_function_configuration(
+        FunctionName=config["worker_function"]
+    )["Environment"]["Variables"]
+    check(
+        worker_env.get("WORKER_FUNCTION") == config["worker_function"],
+        "deployed worker can dispatch follow-up cleanup",
+    )
 
     raw = data()
     api("POST", "/images", expected=401, key="unauthenticated", json={})
@@ -181,12 +196,33 @@ def run(config_path: Path) -> None:
     empty = api("GET", "/images", params={"owner_id": alice, "date_to": "2000-01-01"}).json()
     check(empty["items"] == [], "date range excludes newer images")
 
-    bad, _ = initiate(alice, b"not an image")
-    put(bad, b"not an image")
-    api("POST", f"/images/{bad['image_id']}/complete", owner=alice, expected=202)
-    wait_status(alice, bad["image_id"], "rejected")
-    api("GET", f"/images/{bad['image_id']}", expected=404)
-    check(True, "invalid contents are rejected and never published")
+    rule_name = config["schedule_name"]
+    if events.describe_rule(Name=rule_name)["State"] != "ENABLED":
+        raise AssertionError("Recovery rule must be enabled before the cleanup check")
+    try:
+        events.disable_rule(Name=rule_name)
+        bad, _ = initiate(alice, b"not an image")
+        put(bad, b"not an image")
+        api("POST", f"/images/{bad['image_id']}/complete", owner=alice, expected=202)
+        wait_status(alice, bad["image_id"], "rejected")
+        api("GET", f"/images/{bad['image_id']}", expected=404)
+        check(True, "invalid contents are rejected and never published")
+        deadline = time.monotonic() + 120
+        while time.monotonic() < deadline:
+            rejected = ddb.Table(config["image_table"]).get_item(
+                Key={"image_id": bad["image_id"]}, ConsistentRead=True
+            )["Item"]
+            if rejected["status"] == "rejected" and not rejected["cleanup_pending"]:
+                head = s3.head_object(
+                    Bucket=config["bucket_name"], Key=f"originals/{bad['image_id']}"
+                )
+                check(head["ContentLength"] == 0, "rejected upload cleans up without recovery")
+                break
+            time.sleep(1)
+        else:
+            raise TimeoutError("Rejected upload cleanup did not finish in 120 seconds")
+    finally:
+        events.enable_rule(Name=rule_name)
 
     pending, _ = initiate(alice, raw)
     api("DELETE", f"/images/{pending['image_id']}", owner=alice, expected=202)
@@ -201,10 +237,6 @@ def run(config_path: Path) -> None:
     put(upload, raw, expected=412)
     check(True, "deletion hides the image, completes, and is repeatable")
 
-    aws = boto3.Session(
-        aws_access_key_id="test", aws_secret_access_key="test", region_name="us-east-1"
-    )
-    ddb = aws.resource("dynamodb", endpoint_url=config["endpoint_url"])
     record = ddb.Table(config["image_table"]).get_item(
         Key={"image_id": image_id}, ConsistentRead=True
     )["Item"]
