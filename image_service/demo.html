@@ -28,6 +28,7 @@
     button:disabled { opacity: .55; cursor: wait; }
     .secondary { border-color: #a8b8c1; background: white; color: #1d2934; }
     .secondary:hover { background: #edf3f5; }
+    .identity { margin: -7px 0 18px; padding: 9px 12px; border-radius: 8px; background: #e6f4f0; color: #185e54; font-weight: 600; overflow-wrap: anywhere; }
     .status { min-height: 24px; margin-top: 14px; color: #31576c; }
     .status[data-kind="error"] { color: #ae3030; }
     .status[data-kind="success"] { color: #167060; }
@@ -67,6 +68,7 @@
 
     <section class="panel" aria-labelledby="gallery-heading">
       <h2 id="gallery-heading">Public gallery</h2>
+      <p id="current-user" class="identity" role="status" aria-live="polite"></p>
       <form id="filters">
         <div class="fields">
           <label>Owner ID<input id="owner-filter" type="text" placeholder="All owners"></label>
@@ -94,6 +96,18 @@
     const galleryStatus = byId("gallery-status");
     let nextCursor = null;
     let filters = new URLSearchParams();
+
+    const currentUser = () => byId("user-id").value.trim();
+
+    function syncIdentity() {
+      const owner = currentUser();
+      byId("current-user").textContent = owner
+        ? `Acting as ${owner} (local test user). Only this user's images can be deleted.`
+        : "No user selected. Enter a user ID above to upload or delete.";
+      for (const button of gallery.querySelectorAll(".delete-button")) {
+        button.hidden = !owner || button.dataset.owner !== owner;
+      }
+    }
 
     function report(element, message, kind = "info") {
       element.textContent = message;
@@ -130,7 +144,7 @@
 
     byId("upload-form").addEventListener("submit", async event => {
       event.preventDefault();
-      const owner = byId("user-id").value.trim();
+      const owner = currentUser();
       const file = byId("image-file").files[0];
       const type = file && mediaType(file);
       if (!owner || !file || !type || !file.size || file.size > 20 * 1024 * 1024) {
@@ -201,29 +215,31 @@
       download.href = endpoint(`/images/${image.image_id}/content?disposition=attachment`);
       download.textContent = "Download";
       actions.append(download);
-      if (image.owner_id === byId("user-id").value.trim()) {
-        const remove = document.createElement("button");
-        remove.className = "secondary";
-        remove.type = "button";
-        remove.textContent = "Delete";
-        remove.addEventListener("click", async () => {
-          if (!confirm(`Delete ${image.filename}?`)) return;
-          remove.disabled = true;
-          try {
-            report(galleryStatus, "Deleting image...");
-            await api(`/images/${image.image_id}`, {
-              method: "DELETE", headers: { "X-User-Id": image.owner_id },
-            });
-            await waitForStatus(image.image_id, image.owner_id, "deleted", 180000);
-            report(galleryStatus, "Image deleted.", "success");
-            await loadGallery(true);
-          } catch (error) {
-            report(galleryStatus, error.message, "error");
-            remove.disabled = false;
-          }
-        });
-        actions.append(remove);
-      }
+      const remove = document.createElement("button");
+      remove.className = "secondary delete-button";
+      remove.type = "button";
+      remove.textContent = "Delete";
+      remove.dataset.owner = image.owner_id;
+      remove.hidden = image.owner_id !== currentUser();
+      remove.addEventListener("click", async () => {
+        const owner = currentUser();
+        if (owner !== image.owner_id) return;
+        if (!confirm(`Delete ${image.filename}?`)) return;
+        remove.disabled = true;
+        try {
+          report(galleryStatus, "Deleting image...");
+          await api(`/images/${image.image_id}`, {
+            method: "DELETE", headers: { "X-User-Id": owner },
+          });
+          await waitForStatus(image.image_id, owner, "deleted", 180000);
+          report(galleryStatus, "Image deleted.", "success");
+          await loadGallery(true);
+        } catch (error) {
+          report(galleryStatus, error.message, "error");
+          remove.disabled = false;
+        }
+      });
+      actions.append(remove);
       body.append(title, meta, actions);
       card.append(body);
       return card;
@@ -269,7 +285,8 @@
       loadGallery(true);
     });
     byId("load-more").addEventListener("click", () => loadGallery());
-    byId("user-id").addEventListener("change", () => loadGallery(true));
+    byId("user-id").addEventListener("input", syncIdentity);
+    syncIdentity();
     loadGallery(true);
   </script>
 </body>
