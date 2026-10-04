@@ -12,7 +12,7 @@ Accept one JPEG, PNG, or WebP per upload. Preserve its original bytes. Reject an
 
 Metadata includes the image ID, owner ID, caption, filename, timestamps, file properties, and internal lifecycle information. The two search filters are exact owner ID and the date the image became ready. Either filter can be omitted or combined with the other. Results are newest first and paginated.
 
-Tags, tag discovery, private images, metadata editing, file replacement, a frontend, account registration, thumbnails, image transformations, and moderation are outside scope. User-name search and a user directory are also excluded.
+Tags, tag discovery, private images, metadata editing, file replacement, a production frontend, account registration, thumbnails, image transformations, and moderation are outside scope. User-name search and a user directory are also excluded. A local-only demo page exercises the existing API in a browser.
 
 The following defaults were agreed:
 

@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Image service demo</title>
+  <style>
+    :root { font: 16px/1.5 system-ui, sans-serif; color: #1d2934; background: #f3f6f8; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    main { max-width: 1080px; margin: 0 auto; padding: 32px 20px 64px; }
+    header { margin-bottom: 28px; }
+    h1 { margin: 0 0 6px; font-size: clamp(1.8rem, 4vw, 2.6rem); line-height: 1.2; }
+    h2 { margin: 0 0 18px; font-size: 1.3rem; }
+    p { margin: 0; }
+    .subtitle { color: #526270; }
+    .notice { margin-top: 18px; padding: 12px 15px; border-left: 4px solid #258375; background: #e6f4f0; }
+    .panel { margin-top: 20px; padding: 24px; background: white; border: 1px solid #dce4e9; border-radius: 14px; box-shadow: 0 4px 20px #1632470a; }
+    .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+    label { display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: .91rem; }
+    input { width: 100%; min-height: 42px; padding: 9px 11px; border: 1px solid #9eafb9; border-radius: 8px; background: white; color: inherit; font: inherit; }
+    input[type="file"] { padding: 7px; }
+    input:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid #55b7a7; outline-offset: 2px; }
+    .help { margin-top: 10px; color: #526270; font-size: .88rem; }
+    .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 18px; }
+    button, .link-button { min-height: 40px; padding: 8px 14px; border: 1px solid #126b60; border-radius: 8px; background: #126b60; color: white; font: inherit; font-weight: 600; cursor: pointer; text-decoration: none; }
+    button:hover, .link-button:hover { background: #0c5149; }
+    button:disabled { opacity: .55; cursor: wait; }
+    .secondary { border-color: #a8b8c1; background: white; color: #1d2934; }
+    .secondary:hover { background: #edf3f5; }
+    .status { min-height: 24px; margin-top: 14px; color: #31576c; }
+    .status[data-kind="error"] { color: #ae3030; }
+    .status[data-kind="success"] { color: #167060; }
+    .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; margin-top: 20px; }
+    .card { overflow: hidden; border: 1px solid #dce4e9; border-radius: 10px; background: #fff; }
+    .card img { display: block; width: 100%; height: 180px; object-fit: contain; background: #edf2f5; }
+    .card-body { padding: 13px; }
+    .card-title { margin: 0 0 5px; overflow-wrap: anywhere; font-weight: 700; }
+    .card-meta { color: #526270; font-size: .85rem; overflow-wrap: anywhere; }
+    .card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .card-actions button, .card-actions a { min-height: 36px; padding: 6px 10px; font-size: .88rem; }
+    .empty { margin-top: 18px; color: #526270; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Image service demo</h1>
+      <p class="subtitle">Upload an original image, watch validation, and browse the public gallery.</p>
+      <p class="notice">LocalStack only. The user ID below simulates sign-in; anyone can view a ready image.</p>
+    </header>
+
+    <section class="panel" aria-labelledby="upload-heading">
+      <h2 id="upload-heading">Upload an image</h2>
+      <form id="upload-form">
+        <div class="fields">
+          <label>User ID<input id="user-id" type="text" value="alice" required autocomplete="off"></label>
+          <label>Image<input id="image-file" type="file" accept="image/jpeg,image/png,image/webp" required></label>
+          <label>Caption<input id="caption" type="text" maxlength="2000" placeholder="Optional"></label>
+        </div>
+        <p class="help">JPEG, PNG, or WebP. Maximum 20 MiB and 25 million pixels.</p>
+        <div class="actions"><button id="upload-button" type="submit">Upload image</button></div>
+        <p id="upload-status" class="status" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <section class="panel" aria-labelledby="gallery-heading">
+      <h2 id="gallery-heading">Public gallery</h2>
+      <form id="filters">
+        <div class="fields">
+          <label>Owner ID<input id="owner-filter" type="text" placeholder="All owners"></label>
+          <label>Ready from<input id="date-from" type="date"></label>
+          <label>Ready before<input id="date-to" type="date"></label>
+        </div>
+        <p class="help">The start date is included; the end date is excluded.</p>
+        <div class="actions">
+          <button type="submit">Apply filters</button>
+          <button id="clear-filters" type="button" class="secondary">Clear</button>
+        </div>
+      </form>
+      <p id="gallery-status" class="status" role="status" aria-live="polite"></p>
+      <div id="gallery" class="gallery"></div>
+      <p id="empty-gallery" class="empty" hidden>No ready images match these filters.</p>
+      <div class="actions"><button id="load-more" type="button" class="secondary" hidden>Load more</button></div>
+    </section>
+  </main>
+  <script>
+    const base = location.pathname.replace(/\/demo\/?$/, "");
+    const endpoint = path => base + path;
+    const byId = id => document.getElementById(id);
+    const gallery = byId("gallery");
+    const uploadStatus = byId("upload-status");
+    const galleryStatus = byId("gallery-status");
+    let nextCursor = null;
+    let filters = new URLSearchParams();
+
+    function report(element, message, kind = "info") {
+      element.textContent = message;
+      element.dataset.kind = kind;
+    }
+
+    async function api(path, options = {}) {
+      const response = await fetch(endpoint(path), options);
+      const body = response.status === 204 ? null : await response.json().catch(() => null);
+      if (!response.ok) throw new Error(body?.message || `Request failed (HTTP ${response.status})`);
+      return body;
+    }
+
+    const pause = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
+
+    async function waitForStatus(imageId, owner, wanted, deadlineMs) {
+      const deadline = Date.now() + deadlineMs;
+      while (Date.now() < deadline) {
+        const result = await api(`/images/${imageId}/status`, { headers: { "X-User-Id": owner } });
+        if (result.status === wanted) return result;
+        if (["rejected", "failed", "expired", "deleted"].includes(result.status)) {
+          throw new Error(`Image ${result.status}: ${result.error_reason || "check the status endpoint"}`);
+        }
+        await pause(1000);
+      }
+      throw new Error("Processing is still running. Check the image status again later.");
+    }
+
+    function mediaType(file) {
+      if (["image/jpeg", "image/png", "image/webp"].includes(file.type)) return file.type;
+      const extension = file.name.split(".").pop().toLowerCase();
+      return { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp" }[extension];
+    }
+
+    byId("upload-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      const owner = byId("user-id").value.trim();
+      const file = byId("image-file").files[0];
+      const type = file && mediaType(file);
+      if (!owner || !file || !type || !file.size || file.size > 20 * 1024 * 1024) {
+        report(uploadStatus, "Choose a supported image under 20 MiB and enter a user ID.", "error");
+        return;
+      }
+      const button = byId("upload-button");
+      button.disabled = true;
+      try {
+        report(uploadStatus, "1 of 3: Requesting upload permission...");
+        const upload = await api("/images", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-User-Id": owner,
+            "Idempotency-Key": crypto.randomUUID(),
+          },
+          body: JSON.stringify({
+            filename: file.name,
+            content_type: type,
+            size_bytes: file.size,
+            caption: byId("caption").value,
+          }),
+        });
+        report(uploadStatus, "2 of 3: Sending original bytes to S3...");
+        const headers = { ...upload.upload_headers };
+        delete headers["Content-Length"];
+        delete headers["content-length"];
+        const sent = await fetch(upload.upload_url, { method: "PUT", headers, body: file });
+        if (!sent.ok) throw new Error(`S3 upload failed (HTTP ${sent.status})`);
+        report(uploadStatus, "3 of 3: Validating the image...");
+        await api(`/images/${upload.image_id}/complete`, {
+          method: "POST", headers: { "X-User-Id": owner },
+        });
+        await waitForStatus(upload.image_id, owner, "ready", 180000);
+        report(uploadStatus, `Ready. Image ID: ${upload.image_id}`, "success");
+        byId("image-file").value = "";
+        byId("caption").value = "";
+        await loadGallery(true);
+      } catch (error) {
+        report(uploadStatus, error.message, "error");
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    function imageCard(image) {
+      const card = document.createElement("article");
+      card.className = "card";
+      const preview = document.createElement("img");
+      preview.src = endpoint(`/images/${image.image_id}/content`);
+      preview.alt = image.caption || image.filename;
+      preview.loading = "lazy";
+      card.append(preview);
+
+      const body = document.createElement("div");
+      body.className = "card-body";
+      const title = document.createElement("p");
+      title.className = "card-title";
+      title.textContent = image.caption || image.filename;
+      const meta = document.createElement("p");
+      meta.className = "card-meta";
+      meta.textContent = `${image.owner_id} · ${new Date(image.ready_at).toLocaleString()}`;
+      const actions = document.createElement("div");
+      actions.className = "card-actions";
+      const download = document.createElement("a");
+      download.className = "link-button";
+      download.href = endpoint(`/images/${image.image_id}/content?disposition=attachment`);
+      download.textContent = "Download";
+      actions.append(download);
+      if (image.owner_id === byId("user-id").value.trim()) {
+        const remove = document.createElement("button");
+        remove.className = "secondary";
+        remove.type = "button";
+        remove.textContent = "Delete";
+        remove.addEventListener("click", async () => {
+          if (!confirm(`Delete ${image.filename}?`)) return;
+          remove.disabled = true;
+          try {
+            report(galleryStatus, "Deleting image...");
+            await api(`/images/${image.image_id}`, {
+              method: "DELETE", headers: { "X-User-Id": image.owner_id },
+            });
+            await waitForStatus(image.image_id, image.owner_id, "deleted", 180000);
+            report(galleryStatus, "Image deleted.", "success");
+            await loadGallery(true);
+          } catch (error) {
+            report(galleryStatus, error.message, "error");
+            remove.disabled = false;
+          }
+        });
+        actions.append(remove);
+      }
+      body.append(title, meta, actions);
+      card.append(body);
+      return card;
+    }
+
+    async function loadGallery(reset = false) {
+      const button = byId("load-more");
+      button.disabled = true;
+      if (reset) {
+        gallery.replaceChildren();
+        nextCursor = null;
+      }
+      try {
+        report(galleryStatus, "Loading gallery...");
+        const query = new URLSearchParams(filters);
+        query.set("limit", "12");
+        if (nextCursor) query.set("cursor", nextCursor);
+        const page = await api(`/images?${query}`);
+        for (const image of page.items) gallery.append(imageCard(image));
+        nextCursor = page.next_cursor;
+        button.hidden = !nextCursor;
+        byId("empty-gallery").hidden = gallery.childElementCount > 0 || Boolean(nextCursor);
+        report(galleryStatus, `${gallery.childElementCount} image${gallery.childElementCount === 1 ? "" : "s"} shown.`);
+      } catch (error) {
+        report(galleryStatus, error.message, "error");
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    byId("filters").addEventListener("submit", event => {
+      event.preventDefault();
+      filters = new URLSearchParams();
+      const owner = byId("owner-filter").value.trim();
+      if (owner) filters.set("owner_id", owner);
+      if (byId("date-from").value) filters.set("date_from", byId("date-from").value);
+      if (byId("date-to").value) filters.set("date_to", byId("date-to").value);
+      loadGallery(true);
+    });
+    byId("clear-filters").addEventListener("click", () => {
+      byId("filters").reset();
+      filters = new URLSearchParams();
+      loadGallery(true);
+    });
+    byId("load-more").addEventListener("click", () => loadGallery());
+    byId("user-id").addEventListener("change", () => loadGallery(true));
+    loadGallery(true);
+  </script>
+</body>
+</html>

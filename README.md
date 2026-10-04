@@ -16,6 +16,8 @@ make integration
 
 Bootstrap writes the API URL to `.local/api.json`. The integration command exercises the deployed API. Run `make lint` and `make test` for fast checks. Run `make recovery`, `make limits`, or `make load` for longer checks. Recovery waits for the five-minute schedule and can take up to seven minutes. Run `make down` to stop LocalStack.
 
+Run `make demo` after bootstrap and open the printed URL to use the local browser interface. The page lets you upload, browse, download, and delete images with a test user ID.
+
 ## Use the API
 
 1. Start an upload with `POST /images` and an `Idempotency-Key`.

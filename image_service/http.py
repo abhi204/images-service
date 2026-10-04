@@ -10,6 +10,7 @@ import os
 import re
 import uuid
 from datetime import UTC, date, datetime
+from pathlib import Path
 
 from botocore.exceptions import ClientError
 
@@ -159,6 +160,12 @@ def _handle(event: dict, request_id: str) -> dict:
     headers = {str(k).lower(): v for k, v in (event.get("headers") or {}).items()}
     params = event.get("queryStringParameters") or {}
     try:
+        if path == "/demo" and method == "GET" and os.getenv("APP_ENV") == "local":
+            return {
+                "statusCode": 200,
+                "headers": {"Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store"},
+                "body": Path(__file__).with_name("demo.html").read_text(encoding="utf-8"),
+            }
         if path == "/images" and method == "POST":
             owner = _identity(event, headers)
             key = headers.get("idempotency-key")

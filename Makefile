@@ -2,10 +2,10 @@ PYTHON ?= .venv/bin/python
 ARCH ?=
 LOCALSTACK_ENDPOINT ?= http://localhost:4567
 
-.PHONY: help setup install lint test build up bootstrap compatibility integration recovery limits load verify down
+.PHONY: help setup install lint test build up bootstrap compatibility integration recovery limits load demo verify down
 
 help:
-	@echo 'Targets: setup lint test build up bootstrap compatibility integration recovery limits load verify down'
+	@echo 'Targets: setup lint test build up bootstrap compatibility integration recovery limits load demo verify down'
 
 setup install:
 	python3.13 -m venv .venv
@@ -40,6 +40,9 @@ limits:
 
 load:
 	$(PYTHON) scripts/load_test.py --config .local/api.json
+
+demo:
+	@$(PYTHON) -c 'import json; from pathlib import Path; print(json.loads(Path(".local/api.json").read_text())["api_url"].rstrip("/") + "/demo")'
 
 verify: lint test compatibility bootstrap integration recovery limits
 

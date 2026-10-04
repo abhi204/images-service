@@ -216,6 +216,17 @@ def test_auth_ignores_client_identity_outside_local(monkeypatch):
     assert body == {"code": "unauthorized", "message": "Authentication is required", "request_id": "req-1"}
 
 
+def test_demo_page_is_available_only_locally(monkeypatch):
+    request = event("GET", "/demo", headers={"X-User-Id": ""})
+    response = http.handler(request, None)
+    assert response["statusCode"] == 200
+    assert response["headers"]["Content-Type"] == "text/html; charset=utf-8"
+    assert "Image service demo" in response["body"]
+
+    monkeypatch.setenv("APP_ENV", "production")
+    assert http.handler(request, None)["statusCode"] == 404
+
+
 def test_retry_and_recovery_bounds(monkeypatch):
     created, data, _ = initiate()
     image_id = created["image_id"]
